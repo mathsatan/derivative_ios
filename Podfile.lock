@@ -1,0 +1,24 @@
+PODS:
+  - Alamofire (4.7.2)
+  - iosMath (0.9.4)
+  - SwiftyJSON (4.1.0)
+
+DEPENDENCIES:
+  - Alamofire (~> 4.7)
+  - iosMath
+  - SwiftyJSON (~> 4.1.0)
+
+SPEC REPOS:
+  https://github.com/CocoaPods/Specs.git:
+    - Alamofire
+    - iosMath
+    - SwiftyJSON
+
+SPEC CHECKSUMS:
+  Alamofire: e4fa87002c137ba2d8d634d2c51fabcda0d5c223
+  iosMath: f7a6cbadf9d836d2149c2a84c435b1effc244cba
+  SwiftyJSON: c29297daf073d2aa016295d5809cdd68045c39b3
+
+PODFILE CHECKSUM: f6a03e6958c5de76759ba490ef73b79fa668ec7a
+
+COCOAPODS: 1.5.0
