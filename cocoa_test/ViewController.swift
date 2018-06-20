@@ -12,7 +12,7 @@ import SwiftyJSON
 import iosMath
 
 class ViewController: UIViewController {
-    private let SERVICE_URL = "https://math-deque.herokuapp.com/str/"
+    private let SERVICE_URL = "http://localhost:9000/evaluate"
     
     @IBOutlet weak var expressionText: UITextField!
     
@@ -22,23 +22,31 @@ class ViewController: UIViewController {
     
     @IBOutlet weak var latexView: UIView!
     
+    @IBOutlet weak var plotImage: UIImageView!
     private func onRequestComplete(_ error: String? = nil) -> Void {
         resultLabel.text = ""
         if let e: String = error {
             print(e)
             resultLabel.text = e
+            self.latexView.subviews.forEach { $0.removeFromSuperview() }
+            self.plotImage.image = nil
         }
         self.progressIndicator.stopAnimating()
     }
     
     @IBAction func onClick(_ sender: UIButton) {
-        guard let expression: String = expressionText.text else {
+        guard let expression: String = expressionText.text, expression != "" else {
             return
         }
         progressIndicator.startAnimating()
+        self.resultLabel.text = ""
         
-        
-        Alamofire.request(SERVICE_URL + expression).responseJSON { (responseData) -> Void in
+        let data = ["expression": "\(expression)"]
+        Alamofire.request(SERVICE_URL,
+                          method: .post,
+                          parameters: data,
+                          encoding: JSONEncoding.default,
+                          headers: nil).responseJSON { (responseData) -> Void in
             if (responseData.result.value == nil) {
                 self.onRequestComplete("Result is null")
             } else {
@@ -47,41 +55,71 @@ class ViewController: UIViewController {
                     return
                 }
                 let swiftyJsonVar = JSON(value)
-                guard let mathFunc = swiftyJsonVar["MathFunc"].rawString() else {
-                    self.onRequestComplete("Fetching 'MathFunc' key fails")
-                    return
+                
+                if let mathError = swiftyJsonVar["math_error"].string {
+                    self.onRequestComplete(mathError)
+                } else {
+                    guard let mathFunc = swiftyJsonVar["MathFunc"].rawString() else {
+                        self.onRequestComplete("Fetching 'MathFunc' key fails")
+                        return
+                    }
+                    guard let mathResultFunc = swiftyJsonVar["MathResultFunc"].rawString() else {
+                        self.onRequestComplete("Fetching 'MathResultFunc' key fails")
+                        return
+                    }
+                    
+                    self.plotImage.image = nil
+                    if let mathPlot = swiftyJsonVar["MathPlotFileName"].rawString() {
+                        if mathPlot != "null" {
+                            self.load2DPlot(mathPlot)
+                        }
+                    }
+                    
+                    let latexLabel: MTMathUILabel = MTMathUILabel()
+                    latexLabel.latex = "Task: " + mathFunc + " \\\\ Result: " + mathResultFunc
+                    latexLabel.sizeToFit()
+                    self.latexView.subviews.forEach { $0.removeFromSuperview() }
+                    self.latexView.addSubview(latexLabel)
+                    self.onRequestComplete()
                 }
-                guard let mathResultFunc = swiftyJsonVar["MathResultFunc"].rawString() else {
-                    self.onRequestComplete("Fetching 'MathResultFunc' key fails")
-                    return
-                }
-                print(mathFunc)
-                print(mathResultFunc)
-                let latexLabel: MTMathUILabel = MTMathUILabel()
-                latexLabel.latex = "Task: " + mathFunc + " \\\\ Result: " + mathResultFunc
-                latexLabel.sizeToFit()
-                self.latexView.addSubview(latexLabel)
-                self.onRequestComplete()
             }
         }
     }
     
+    fileprivate func load2DPlot(_ plotImageName: String) {
+        plotImage.downloadedFrom(link: "http://localhost:9000/getRes/" + plotImageName)
+        print(plotImageName)
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        /*let asyncQueue = DispatchQueue(label: "asyncQueue", attributes: .concurrent)
-        
-        asyncQueue.async {
-            for i in 0 ... 10 {
-                print("Async FIRST here\(i)")
-            }
-        }*/
     }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
+}
 
-
+// Extension for async image loading
+extension UIImageView {
+    func downloadedFrom(url: URL, contentMode mode: UIViewContentMode = .scaleAspectFit) {
+        contentMode = mode
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard
+                let httpURLResponse = response as? HTTPURLResponse, httpURLResponse.statusCode == 200,
+                let mimeType = response?.mimeType, mimeType.hasPrefix("image"),
+                let data = data, error == nil,
+                let image = UIImage(data: data)
+                else { return }
+            DispatchQueue.main.async() {
+                self.image = image
+            }
+            }.resume()
+    }
+    func downloadedFrom(link: String, contentMode mode: UIViewContentMode = .scaleAspectFit) {
+        guard let url = URL(string: link) else { return }
+        downloadedFrom(url: url, contentMode: mode)
+    }
 }
 
