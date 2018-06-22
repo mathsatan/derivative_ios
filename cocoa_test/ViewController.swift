@@ -11,8 +11,9 @@ import Alamofire
 import SwiftyJSON
 import iosMath
 
-class ViewController: UIViewController {
-    private let SERVICE_URL = "http://localhost:9000/evaluate"
+class ViewController: UIViewController, UITextFieldDelegate {
+    //private let SERVICE_URL = "http://localhost:9000/evaluate"
+    private let SERVICE_URL = "https://derivative-service.herokuapp.com/"
     
     @IBOutlet weak var expressionText: UITextField!
     
@@ -42,7 +43,7 @@ class ViewController: UIViewController {
         self.resultLabel.text = ""
         
         let data = ["expression": "\(expression)"]
-        Alamofire.request(SERVICE_URL,
+        Alamofire.request(SERVICE_URL + "evaluate",
                           method: .post,
                           parameters: data,
                           encoding: JSONEncoding.default,
@@ -87,14 +88,31 @@ class ViewController: UIViewController {
     }
     
     fileprivate func load2DPlot(_ plotImageName: String) {
-        plotImage.downloadedFrom(link: "http://localhost:9000/getRes/" + plotImageName)
+        plotImage.downloadedFrom(link: SERVICE_URL + "getRes/" + plotImageName)
         print(plotImageName)
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.expressionText.delegate = self
     }
-
+    
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        if textField == self.expressionText {
+            self.expressionText.becomeFirstResponder()
+        }
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.expressionText.endEditing(true)
+        super.touchesBegan(touches, with: event)
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.expressionText.endEditing(true);
+        return false;
+    }
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
